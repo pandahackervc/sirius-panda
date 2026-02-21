@@ -21,21 +21,26 @@ import { title } from "../settings/settings.json";
 		<Footer />
 		<ColorScript />
 		<script is:inline src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-		<script>
+		<script is:inline>
+			const hasWriterRole = (user) =>
+				Boolean(user?.app_metadata?.roles?.includes("writer"));
+
 			if (window.netlifyIdentity) {
 				window.netlifyIdentity.on("init", (user) => {
-					if (user) {
-						window.location.href = "/admin/";
-					}
+				if (hasWriterRole(user)) window.location.href = "/admin/";
 				});
 
-				window.netlifyIdentity.on("login", () => {
+				window.netlifyIdentity.on("login", (user) => {
+				if (hasWriterRole(user)) {
 					window.location.href = "/admin/";
+				} else {
+					alert("Your account is logged in but does not have writer access yet.");
+					window.netlifyIdentity.close();
+				}
 				});
 
-				const loginButton = document.querySelector("#open-login");
-				loginButton?.addEventListener("click", () => {
-					window.netlifyIdentity.open();
+				document.querySelector("#open-login")?.addEventListener("click", () => {
+				window.netlifyIdentity.open();
 				});
 			}
 		</script>
