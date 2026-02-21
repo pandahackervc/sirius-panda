@@ -154,6 +154,41 @@ ul.tags-list {
 	font-size: 1.3em;
 }
 
+.filters {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 0.8rem;
+	margin-bottom: 1.2rem;
+}
+
+.filters-row {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.filters-row label {
+	font-size: 0.85rem;
+}
+
+.filters-row select,
+.filters button {
+	border: 1px solid var(--gray);
+	background: transparent;
+	color: inherit;
+	padding: 0.35rem 0.5rem;
+}
+
+.filters button {
+	cursor: pointer;
+}
+
+.empty-posts-message {
+	color: var(--gray);
+	font-style: italic;
+}
+
 .tags {
 	display: flex;
 	flex-wrap: wrap;

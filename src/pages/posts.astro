@@ -15,6 +15,30 @@ posts = posts.sort(
 		new Date(b.data.updated || b.data.added).valueOf() -
 		new Date(a.data.updated || a.data.added).valueOf(),
 );
+
+const postsWithMeta = posts.map((post) => {
+	const publishDate = post.data.updated || post.data.added;
+	return {
+		...post,
+		year: new Date(publishDate).getFullYear().toString(),
+		filterTags: (post.data.tags || []).map((tag) => tag.toLowerCase()).join("|"),
+	};
+});
+
+const yearCounts = postsWithMeta.reduce((acc, post) => {
+	acc[post.year] = (acc[post.year] || 0) + 1;
+	return acc;
+}, {});
+
+const tagCounts = postsWithMeta.reduce((acc, post) => {
+	for (const tag of post.data.tags || []) {
+		acc[tag] = (acc[tag] || 0) + 1;
+	}
+	return acc;
+}, {});
+
+const years = Object.keys(yearCounts).sort((a, b) => Number(b) - Number(a));
+const tags = Object.keys(tagCounts).sort((a, b) => a.localeCompare(b));
 ---
 
 <!doctype html>
@@ -24,25 +48,137 @@ posts = posts.sort(
 		<Header />
 		<main>
 			<content>
+				<section class="filters" aria-label="Filter posts">
+					<div class="filters-row">
+						<label for="year-filter">Year</label>
+						<select id="year-filter">
+							<option value="">All years</option>
+							{
+								years.map((year) => (
+									<option value={year}>{year} ({yearCounts[year]})</option>
+								))
+							}
+						</select>
+					</div>
+					<div class="filters-row">
+						<label for="tag-filter">Tag</label>
+						<select id="tag-filter">
+							<option value="">All tags</option>
+							{
+								tags.map((tag) => (
+									<option value={tag}>#{tag} ({tagCounts[tag]})</option>
+								))
+							}
+						</select>
+					</div>
+					<button id="clear-filters" type="button">Clear filters</button>
+				</section>
+
 				<ul class="posts-list">
 					{
-						posts.map(
+						postsWithMeta.map(
 							({
-								url,
+								year,
+								filterTags,
 								data: { description, slug, title, tags, added: date },
-							}) => <Post {description} {date} {slug} {title} {tags} />
+							}) => (
+								<Post
+									{description}
+									{date}
+									{slug}
+									{title}
+									{tags}
+									attributes={{
+										"data-post-item": "true",
+										"data-year": year,
+										"data-tags": filterTags,
+									}}
+								/>
+							)
 						)
 					}
 				</ul>
+				<p class="empty-posts-message" id="empty-posts-message" hidden>
+					No posts match this filter combination.
+				</p>
 			</content>
-
-			<p class="center">
-				You can also <a href="https://blahg.netlify.app/rss.xml">
-					subscribe with RSS!
-				</a>
-			</p>
 		</main>
 		<Footer />
 		<ColorScript />
+		<script>
+			const yearFilter = document.querySelector("#year-filter");
+			const tagFilter = document.querySelector("#tag-filter");
+			const clearFilters = document.querySelector("#clear-filters");
+			const emptyState = document.querySelector("#empty-posts-message");
+			const postItems = [...document.querySelectorAll("[data-post-item]")];
+
+			const params = new URLSearchParams(window.location.search);
+			const initialYear = params.get("year");
+			const initialTag = params.get("tag");
+
+			const hasYearOption = initialYear
+				? [...(yearFilter?.options || [])].some((option) => option.value === initialYear)
+				: false;
+			const hasTagOption = initialTag
+				? [...(tagFilter?.options || [])].some((option) => option.value === initialTag)
+				: false;
+
+			if (initialYear && hasYearOption) {
+				yearFilter.value = initialYear;
+			}
+
+			if (initialTag && hasTagOption) {
+				tagFilter.value = initialTag;
+			}
+
+			const updateUrl = (year, tag) => {
+				const nextParams = new URLSearchParams(window.location.search);
+
+				if (year) nextParams.set("year", year);
+				else nextParams.delete("year");
+
+				if (tag) nextParams.set("tag", tag);
+				else nextParams.delete("tag");
+
+				const queryString = nextParams.toString();
+				const nextUrl = queryString
+					? `${window.location.pathname}?${queryString}`
+					: window.location.pathname;
+				history.replaceState(null, "", nextUrl);
+			};
+
+			const applyFilters = () => {
+				const selectedYear = yearFilter?.value || "";
+				const selectedTag = tagFilter?.value?.toLowerCase() || "";
+				let visiblePostCount = 0;
+
+				postItems.forEach((item) => {
+					const postYear = item.getAttribute("data-year");
+					const postTags = item.getAttribute("data-tags")?.split("|") || [];
+					const matchesYear = !selectedYear || postYear === selectedYear;
+					const matchesTag = !selectedTag || postTags.includes(selectedTag);
+					const shouldShow = matchesYear && matchesTag;
+
+					item.hidden = !shouldShow;
+					if (shouldShow) visiblePostCount += 1;
+				});
+
+				if (emptyState) {
+					emptyState.hidden = visiblePostCount !== 0;
+				}
+
+				updateUrl(selectedYear, selectedTag);
+			};
+
+			yearFilter?.addEventListener("change", applyFilters);
+			tagFilter?.addEventListener("change", applyFilters);
+			clearFilters?.addEventListener("click", () => {
+				if (yearFilter) yearFilter.value = "";
+				if (tagFilter) tagFilter.value = "";
+				applyFilters();
+			});
+
+			applyFilters();
+		</script>
 	</body>
 </html>

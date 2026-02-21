@@ -1,0 +1,43 @@
+---
+import BaseHead from "../components/BaseHead.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import ColorScript from "../components/ColorScript.astro";
+import { title } from "../settings/settings.json";
+---
+
+<!doctype html>
+<html lang="en-us">
+	<BaseHead title={`Login | ${title}`} description="Author login" />
+	<body>
+		<Header />
+		<main>
+			<content>
+				<h3>Author login</h3>
+				<p>Sign in to access the post editor.</p>
+				<button id="open-login" type="button">Login with Netlify Identity</button>
+			</content>
+		</main>
+		<Footer />
+		<ColorScript />
+		<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+		<script>
+			if (window.netlifyIdentity) {
+				window.netlifyIdentity.on("init", (user) => {
+					if (user) {
+						window.location.href = "/admin/";
+					}
+				});
+
+				window.netlifyIdentity.on("login", () => {
+					window.location.href = "/admin/";
+				});
+
+				const loginButton = document.querySelector("#open-login");
+				loginButton?.addEventListener("click", () => {
+					window.netlifyIdentity.open();
+				});
+			}
+		</script>
+	</body>
+</html>
